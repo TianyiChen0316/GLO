@@ -3,7 +3,7 @@ import numpy as np
 from collections.abc import Iterable as _Iterable
 
 from lib.syntax.placeholder import PlaceholderMetaclass
-from lib.syntax import view
+from lib.syntax import view, dict_keys, dict_values, dict_items
 
 
 def _heap_comparison(values):
@@ -141,7 +141,12 @@ class _SequenceFeature:
         elif isinstance(value, np.ndarray):
             value = torch.tensor(value, device=self.device)
         elif not isinstance(value, torch.Tensor):
-            if isinstance(value, (_TensorPlaceholder, _TensorFixedPlaceholder)):
+            if isinstance(value, _TensorFixedPlaceholder):
+                if value._tensor is not None:
+                    value = value._tensor
+                else:
+                    value = _TensorFixedPlaceholder(self, '_items', key, value._target_shape, value._dtype)
+            elif isinstance(value, _TensorPlaceholder):
                 if value._tensor is not None:
                     value = value._tensor
                 else:
@@ -259,6 +264,15 @@ class _SequenceFeature:
     def __delitem__(self, item):
         if item in self._items:
             del self._items[item]
+
+    def keys(self):
+        return dict_keys(self)
+
+    def values(self):
+        return dict_values(self)
+
+    def items(self):
+        return dict_items(self)
 
     def __len__(self):
         return len(self._items)
@@ -516,6 +530,15 @@ class Sequence(SequenceBase):
     def __repr__(self):
         return self.__str__()
 
+    def keys(self):
+        return self._features['feature'].keys()
+
+    def values(self):
+        return self._features['feature'].values()
+
+    def items(self):
+        return self._features['feature'].items()
+
     @view.getter_view
     def attention(self, item):
         return self._features['attention'].__getitem__(item)
@@ -527,6 +550,18 @@ class Sequence(SequenceBase):
     @attention.delitem
     def attention(self, item):
         return self._features['attention'].__delitem__(item)
+
+    @attention.method('keys')
+    def attention(self):
+        return self._features['attention'].keys()
+
+    @attention.method('values')
+    def attention(self):
+        return self._features['attention'].values()
+
+    @attention.method('items')
+    def attention(self):
+        return self._features['attention'].items()
 
     @attention.str
     def attention(self):

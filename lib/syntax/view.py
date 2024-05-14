@@ -1,3 +1,7 @@
+from types import MappingProxyType
+from collections.abc import Mapping
+
+
 class view:
     @classmethod
     def getter_view(cls, getter):
@@ -166,3 +170,45 @@ class view:
             return self.__class__(self._call, self._getitem, self._setitem, self._delitem, self._getters, self._setters,
                                   self._deleters, new_methods, self.__doc__)
         return method
+
+
+class dict_view:
+    def __init__(self, mapping):
+        if not isinstance(mapping, Mapping):
+            raise TypeError(f"'{mapping.__class__.__name__}' is not a mapping")
+        self.__mapping = MappingProxyType(mapping)
+
+    @property
+    def mapping(self):
+        return self.__mapping
+
+    def __len__(self):
+        return len(self.__mapping)
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __repr__(self):
+        return '{}([{}])'.format(self.__class__.__name__, ', '.join(map(repr, self)))
+    __str__ = __repr__
+
+
+class dict_keys(dict_view):
+    def __iter__(self):
+        for k in self.mapping.keys():
+            yield k
+
+
+class dict_values(dict_view):
+    def __iter__(self):
+        for k in self.mapping.values():
+            yield k
+
+
+class dict_items(dict_view):
+    def __iter__(self):
+        for k in self.mapping.items():
+            yield k
+
+
+__all__ = ['view', 'dict_keys', 'dict_values', 'dict_items']

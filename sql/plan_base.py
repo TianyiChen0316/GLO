@@ -151,7 +151,7 @@ class PlanBase:
                 left, right = left_root, right_root
             if unordered:
                 left_is_leaf, right_is_leaf = self._node_is_leaf(left), self._node_is_leaf(right)
-                if (left_is_leaf and not right_is_leaf) or left_is_leaf == right_is_leaf and right < left:
+                if (left_is_leaf and not right_is_leaf) or not (left_is_leaf ^ right_is_leaf) and right < left:
                     left, right = right, left
             res.add((left, right))
         return res
@@ -269,7 +269,9 @@ class PlanBase:
             alias_root = self._roots.root(alias, default=alias)
             join_predicates = self.sql.table_eqjoin_predicates.get(alias, []) + self.sql.table_neqjoin_predicates.get(alias, [])
             for other_alias, condition in join_predicates:
-                assert alias != other_alias, f'self joins should be categorized as filter predicates: {condition}'
+                if alias == other_alias:
+                    # self join should always be considered
+                    conditions.append(condition)
                 if other_alias not in aliases:
                     # ensure that only one between <alias, other_alias> and <other_alias, alias> is traversed
                     continue
@@ -279,7 +281,7 @@ class PlanBase:
                     conditions.append(condition)
 
         # other complicated predicates
-        for complicated_condition in self.sql.other_complicated_predicates:
+        for concerned_aliases, complicated_condition in self.sql.other_complicated_predicates:
             concerned_aliases = sql_parser.concerned_aliases(complicated_condition)
             concerned_roots = set(map(lambda x: self._roots.root(x, default=x), concerned_aliases))
             if len(concerned_roots) > 1:

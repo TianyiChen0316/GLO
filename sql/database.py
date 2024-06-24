@@ -705,6 +705,7 @@ class Schema:
             'name_to_indexes', 'table_names', 'name_to_table', 'size', 'table_structures',
             'total_columns', 'max_columns', 'columns', 'column_indexes', 'table_columns',
             'foreign_keys', 'foreign_keys_from', 'primary_keys',
+            'column_db_indexes',
         ):
             setattr(self, name, state_dict[name])
 
@@ -714,6 +715,7 @@ class Schema:
             'name_to_indexes', 'table_names', 'name_to_table', 'size', 'table_structures',
             'total_columns', 'max_columns', 'columns', 'column_indexes', 'table_columns',
             'foreign_keys', 'foreign_keys_from', 'primary_keys',
+            'column_db_indexes',
         ):
             res[name] = getattr(self, name)
         res['tables'] = [i.state_dict() for i in self.tables]

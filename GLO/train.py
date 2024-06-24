@@ -603,7 +603,7 @@ class Trainer(StateDictInterface):
             parent_index = search_res.parent_index
             i = 0
             while parent_index is not None:
-                parent_list = search_paths[-1 - i]
+                parent_list = search_paths[-2 - i]
                 parent = parent_list[parent_index]
                 parent.value = min(parent.value, state_value) if parent.value is not None else state_value
                 parent_index = parent.parent_index

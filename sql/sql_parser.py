@@ -1645,32 +1645,8 @@ class PlanParser:
             node_attrs = attrs
 
         child_plans = plan.get('Plans', None)
-        if child_plans is None:
-            # a leaf node (generally a scan operator)
-            if not node_type.endswith('Scan'):
-                print(f"Warning: unknown leaf node type '{node_type}'", file=sys.stderr)
-
-            alias = plan.get('Alias', self._get_alias_from_node_attrs(node_attrs))
-            if alias is None:
-                raise RuntimeError(f"cannot get alias from plan: {node_attrs}")
-            if alias in self._aliases:
-                raise RuntimeError(f"alias '{alias}' appears twice in the plan")
-            self._aliases.add(alias)
-            self._attrs[alias] = node_attrs
-            self._parent[alias] = parent
-            if parent is not None:
-                parent_node = self._branch_nodes[parent]
-                if right_tree:
-                    parent_node.right_child = alias
-                else:
-                    parent_node.left_child = alias
-            else:
-                self._root_node = alias
-        elif len(child_plans) == 2:
+        if child_plans and len(child_plans) == 2 and node_type in ('Nested Loop', 'Merge Join', 'Hash Join'):
             # a branch join node
-            if node_type not in ('Nested Loop', 'Merge Join', 'Hash Join'):
-                print(f"Warning: unknown branch node type '{node_type}'", file=sys.stderr)
-
             plans = plan['Plans']
             if right_tree:
                 # this node is in the right tree
@@ -1696,12 +1672,31 @@ class PlanParser:
             left, right = plans
             self._parse(left, parent=node_index, right_tree=False)
             self._parse(right, parent=node_index, right_tree=True)
-        elif len(child_plans) == 1:
+        elif child_plans and len(child_plans) == 1:
             # pass the node attributes to the child node
             self._parse(child_plans[0], parent=parent, right_tree=right_tree, attrs=node_attrs)
         else:
-            # theoretically this will not happen
-            raise RuntimeError(f"Unknown node type '{node_type}': plan")
+            # a leaf node (generally a scan operator)
+            if not node_type.endswith('Scan'):
+                # sometimes the optimizer generates some nodes like BitmapAnd etc.
+                pass #print(f"Warning: unknown leaf node type '{node_type}'", file=sys.stderr)
+
+            alias = plan.get('Alias', self._get_alias_from_node_attrs(node_attrs))
+            if alias is None:
+                raise RuntimeError(f"cannot get alias from plan: {node_attrs}")
+            if alias in self._aliases:
+                raise RuntimeError(f"alias '{alias}' appears twice in the plan")
+            self._aliases.add(alias)
+            self._attrs[alias] = node_attrs
+            self._parent[alias] = parent
+            if parent is not None:
+                parent_node = self._branch_nodes[parent]
+                if right_tree:
+                    parent_node.right_child = alias
+                else:
+                    parent_node.left_child = alias
+            else:
+                self._root_node = alias
         for condition_name in ('Recheck Cond', 'Index Cond'):
             condition = plan.get(condition_name, None)
             if condition is None:
